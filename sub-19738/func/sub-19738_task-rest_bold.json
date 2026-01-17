@@ -1,0 +1,6 @@
+{
+    "TaskName": "rest",
+    "RepetitionTime": 2.5,
+    "TaskDescription": "Resting state",
+    "TaskAbbreviation": "rest"
+}
