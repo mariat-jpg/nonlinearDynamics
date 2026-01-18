@@ -1,0 +1,4 @@
+fmri_env/
+.vscode/
+_pycache_/
+*.pyc
