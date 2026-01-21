@@ -30,3 +30,25 @@ plt.tight_layout()
 os.makedirs("results/plots", exist_ok=True)
 plt.savefig("results/plots/roi_time_series.png", dpi=300)
 print("Saved ROI plot to results/plots/roi_time_series.png")
+
+print("ENTERING CONNECTIVITY STEP")
+
+#Pearsons Correlation Connectivity Matrix
+corr_matrix = np.corrcoef(time_series.T)
+print("Connectivity matrix shape:", corr_matrix.shape)
+os.makedirs("results/matrices", exist_ok=True)
+np.save("results/matrices/pearson_connectivity.npy", corr_matrix)
+print("Connectivity matrix saved to results/matrices/")
+
+plt.figure(figsize=(8, 6))
+plt.imshow(corr_matrix, cmap="coolwarm", vmin=-1, vmax=1)
+plt.colorbar(label="Pearson Correlation")
+plt.title("Functional Connectivity Matrix (Pearson)")
+plt.xlabel("ROI Index")
+plt.ylabel("ROI Index")
+
+os.makedirs("results/plots", exist_ok=True)
+plt.savefig("results/plots/connectivity_matrix.png", dpi=300)
+plt.close()
+print("Connectivity matrix heatmap saved to results/plots/")
+
