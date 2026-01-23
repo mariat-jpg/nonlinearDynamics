@@ -31,6 +31,6 @@ def load_atlas():
     tree = ET.parse("dataset/atlas/AAL.xml")
     root = tree.getroot()
 
-    atlas_labels = [region.find("name").text for region in root.findall(".//label")]
+    atlas_labels = [region.find("name").text for region in root.findall(".//label")]                       
     
     return atlas_img, atlas_labels
