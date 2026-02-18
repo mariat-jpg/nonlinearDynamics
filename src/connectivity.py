@@ -8,5 +8,5 @@ def compute_connectivity_matrix(bold_ts):
     correlation_measure = ConnectivityMeasure(kind = 'correlation')
     correlation_matrix = correlation_measure.fit_transform([bold_ts])[0]
     np.fill_diagonal(correlation_matrix, 0)
-    print("\nCorrelation matrix shape:", correlation_matrix.shape)
+    #print("\nCorrelation matrix shape:", correlation_matrix.shape)
     return correlation_matrix

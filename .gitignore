@@ -4,4 +4,5 @@ _pycache_/
 *.pyc
 results/
 outputs/
+dataset/
 .DS_Store
