@@ -6,8 +6,13 @@ from src.connectivity import compute_connectivity_matrix
 from src.dynamic_analysis import sliding_window_connectivity, spectral_partition, spectral_clustering, compute_roi_switches
 from nilearn.image import mean_img, index_img
 from nilearn.plotting import plot_epi, plot_roi, plot_matrix, plot_connectome, show, find_parcellation_cut_coords, find_xyz_cut_coords
+from glob import glob
+import os
 import matplotlib.pyplot as plt
 import numpy as np
+
+import warnings
+warnings.filterwarnings("ignore")
 
 def epi_images():
     #mean of all 3D fMRI images bc plot_epi only accepts 3D image
@@ -157,18 +162,65 @@ if __name__ == "__main__":
                 else:
                     print("Exiting...")
 
-        elif ch1==2:
-            print("\nHealthy Subject")
-            connectivity_matrices = sliding_window_connectivity(bold_ts, window_size=20, step_size=1)
-            all_clusters, all_fiedlers = spectral_clustering(connectivity_matrices)
-            roi_switches = compute_roi_switches(all_clusters)
-            print("ROI switches:", roi_switches)
+        elif (ch1 == 2):
+            #Healthy subjects
+            healthy_roi_switches = []
 
-            print("\nParkinson's Subject")
-            connectivity_matrices = sliding_window_connectivity(bold_ts_pd, window_size=20, step_size=1)
-            all_clusters, all_fiedlers = spectral_clustering(connectivity_matrices)
-            roi_switches = compute_roi_switches(all_clusters)
-            print("ROI switches:", roi_switches)
+            healthy_files = sorted(glob("dataset/taowu/sub-control*/func/*_task-resting_bold.nii"))
+            print(f"\nFound {len(healthy_files)} healthy subjects")
+
+            for fmri_path in healthy_files:
+                subject_id = os.path.basename(os.path.dirname(os.path.dirname(fmri_path)))  # extracts e.g. sub-control032057
+
+                fmri_img   = load_fmri(fmri_path)
+                fmri_clean = preprocess_fmri(fmri_img)
+                bold_ts    = extract_bold_timeseries(fmri_clean, atlas_maps)
+                bold_ts    = bold_ts[:, pd_indices]
+
+                connectivity_matrices = sliding_window_connectivity(bold_ts, window_size=20, step_size=1)
+                all_clusters, all_fiedlers = spectral_clustering(connectivity_matrices)
+                roi_switches = compute_roi_switches(all_clusters)
+
+                healthy_roi_switches.append(roi_switches)
+
+            #Parkinson's subjects
+            parkinsons_roi_switches = []
+
+            parkinsons_files = sorted(glob("dataset/taowu/sub-patient*/func/*_task-resting_bold.nii"))
+            print(f"\nFound {len(parkinsons_files)} Parkinson's subjects")
+
+            for fmri_path in parkinsons_files:
+                subject_id = os.path.basename(os.path.dirname(os.path.dirname(fmri_path)))
+
+                fmri_img   = load_fmri(fmri_path)
+                fmri_clean = preprocess_fmri(fmri_img)
+                bold_ts_pd = extract_bold_timeseries(fmri_clean, atlas_maps)
+                bold_ts_pd = bold_ts_pd[:, pd_indices]
+
+                connectivity_matrices = sliding_window_connectivity(bold_ts_pd, window_size=20, step_size=1)
+                all_clusters, all_fiedlers = spectral_clustering(connectivity_matrices)
+                roi_switches = compute_roi_switches(all_clusters)
+
+                parkinsons_roi_switches.append(roi_switches)
+
+            #Group averages
+            avg_healthy     = np.mean(healthy_roi_switches, axis=0)      # shape (N,)
+            avg_parkinsons  = np.mean(parkinsons_roi_switches, axis=0)
+
+            print("\nGroup Average")
+            print("\nAverage ROI switches (Healthy):")
+            for region, val in zip(pd_regions, avg_healthy):
+                print(f"  {region}: {val:.2f}")
+
+            print("\nAverage ROI switches (Parkinson's):")
+            for region, val in zip(pd_regions, avg_parkinsons):
+                print(f"  {region}: {val:.2f}")
+
+            np.save("outputs/avg_roi_switches_healthy.npy", avg_healthy)
+            np.save("outputs/avg_roi_switches_parkinsons.npy", avg_parkinsons)
+            np.save("outputs/all_roi_switches_healthy.npy", np.array(healthy_roi_switches))
+            np.save("outputs/all_roi_switches_parkinsons.npy", np.array(parkinsons_roi_switches))
+            print("\nResults saved to outputs/")
 
         else:
             print("Exiting...")
