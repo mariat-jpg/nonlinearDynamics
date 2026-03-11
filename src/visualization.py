@@ -4,6 +4,7 @@ import os
 
 def time_series(atlas_labels, bold_ts, bold_ts_pd):
     roi_indices = [0, 1, 2, 3, 4]
+    plt.close('all')
     fig, axes = plt.subplots(nrows = 2, ncols = 1,figsize=(10, 5))
     for roi in roi_indices:
         axes[0].plot(bold_ts[:, roi], label=atlas_labels[roi])

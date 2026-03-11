@@ -1,5 +1,6 @@
 import scipy.io
 import numpy as np
+import networkx as nx
 
 def sliding_window_connectivity(time_series, window_size, step_size, sigma=None):
     """
@@ -66,3 +67,65 @@ def spectral_clustering(connectivity_matrices):
 
 def compute_roi_switches(cluster_matrix):
     return np.sum(np.abs(np.diff(cluster_matrix, axis=0)), axis=0)
+
+def compute_window_measures(connectivity_matrices, threshold=0.3):
+    """
+    For each window, compute graph-theoretic measures.
+    connectivity_matrices: shape (num_windows, N, N)
+    Returns a dict of measures, each of shape (num_windows,) or (num_windows, N) for node-level measures
+    """
+    num_windows = connectivity_matrices.shape[0]
+
+    clustering_coeffs  = np.zeros(num_windows)
+    path_lengths       = np.zeros(num_windows)
+    global_efficiencies = np.zeros(num_windows)
+    modularities       = np.zeros(num_windows)
+    node_strengths     = np.zeros((num_windows, connectivity_matrices.shape[1]))
+
+    for i in range(num_windows):
+        # threshold the matrix to keep only strong connections
+        matrix = connectivity_matrices[i].copy()
+        matrix[np.abs(matrix) < threshold] = 0
+        np.fill_diagonal(matrix, 0)  # remove self-connections
+
+        G = nx.from_numpy_array(np.abs(matrix))  # use absolute values for weights
+
+        # 1. Clustering coefficient
+        clustering_coeffs[i] = nx.average_clustering(G, weight='weight')
+
+        # 2. Path length and Global efficiency (only if graph is connected)
+        if nx.is_connected(G):
+            path_lengths[i] = nx.average_shortest_path_length(G, weight='weight')
+        else:
+            # use largest connected component if graph is disconnected
+            largest_cc = G.subgraph(max(nx.connected_components(G), key=len))
+            path_lengths[i] = nx.average_shortest_path_length(largest_cc, weight='weight')
+
+        # 3. Global efficiency
+        global_efficiencies[i] = nx.global_efficiency(G)
+
+        # 4. Modularity
+        communities = nx.community.greedy_modularity_communities(G, weight='weight')
+        modularities[i] = nx.community.modularity(G, communities, weight='weight')
+
+        # 5. Node strength (sum of each node's edge weights)
+        node_strengths[i] = np.sum(np.abs(matrix), axis=1)
+
+    return {
+        'clustering':       clustering_coeffs,    # (num_windows,)
+        'path_length':      path_lengths,          # (num_windows,)
+        'global_efficiency': global_efficiencies,  # (num_windows,)
+        'modularity':       modularities,          # (num_windows,)
+        'node_strength':    node_strengths         # (num_windows, N)
+    }
+
+
+def average_measures(measures_list):
+    """
+    Average graph measures across subjects.
+    measures_list: list of measure dicts, one per subject
+    """
+    avg = {}
+    for key in measures_list[0]:
+        avg[key] = np.mean([m[key] for m in measures_list], axis=0)
+    return avg
